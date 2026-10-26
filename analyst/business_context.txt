@@ -6,3 +6,4 @@
 - Customer segments are consumer, small_business and enterprise. Countries are full English names (e.g. 'United States').
 - Margin % = (unit_price - cost) / unit_price. Average order value (AOV) = revenue per order, aggregated per order before averaging.
 - When ranking ("top N"), return at most N rows. For time series, include periods in chronological order.
+- "Last N months" / "past N months" includes the current (partial) month: use the current month and the N-1 months before it. "Return" always means status = 'returned', never 'cancelled'.
