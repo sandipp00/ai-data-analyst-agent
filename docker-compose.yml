@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: analytics
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Optional: `docker compose --profile app up --build` (seed first: python -m scripts.seed)
+  app:
+    build: .
+    profiles: ["app"]
+    depends_on: [postgres]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://analyst_ro:analyst_ro@postgres:5432/analytics
+    ports:
+      - "8501:8501"
+
+volumes:
+  pgdata:
