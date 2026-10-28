@@ -1,9 +1,10 @@
-"""Score the agent against reference SQL: python -m evals.run_evals [--limit N]
+"""Score the agent against reference SQL: python -m evals.run_evals [--limit N] [--only N ...]
 Results are compared as multisets of rounded values, ignoring column names and order
 ; extra result columns are allowed."""
 import argparse
 import json
-import time
+import time as clock
+from datetime import datetime, time
 from pathlib import Path
 
 from analyst import db, run_question
@@ -11,6 +12,8 @@ from analyst import db, run_question
 
 def normalize(df):
     def cell(v):
+        if isinstance(v, datetime) and v.time() == time.min:
+            v = v.date()  # date_trunc returns a midnight timestamp unless cast to date
         try:
             return round(float(v), 2)
         except (TypeError, ValueError):
@@ -48,19 +51,20 @@ def main() -> None:
     cases = [(i, all_cases[i - 1]) for i in picked][: args.limit]
     passed = 0
     for i, case in cases:
-        t0 = time.time()
+        t0 = clock.time()
         try:
-            out = run_question(case["q"])
+            out = run_question(case["q"], case.get("history"))
             if case["sql"] is None:  # should be refused
                 ok = out.get("df") is None
             else:
-                ok = out.get("df") is not None and matches(out["df"], db.run_query(case["sql"]))
+                refs = case["sql"] if isinstance(case["sql"], list) else [case["sql"]]  # any may match
+                ok = out.get("df") is not None and any(matches(out["df"], db.run_query(r)) for r in refs)
             note = "" if ok else f"\n    got SQL: {out.get('sql')}\n    answer: {out.get('answer', '')[:150]}"
         except Exception as e:
             ok, note = False, f"\n    error: {e}"
         passed += ok
-        print(f"[{'PASS' if ok else 'FAIL'}] {i:2d}. {case['q']} ({time.time() - t0:.0f}s){note}", flush=True)
-        time.sleep(args.sleep)
+        print(f"[{'PASS' if ok else 'FAIL'}] {i:2d}. {case['q']} ({clock.time() - t0:.0f}s){note}", flush=True)
+        clock.sleep(args.sleep)
     print(f"\n{passed}/{len(cases)} passed")
 
 

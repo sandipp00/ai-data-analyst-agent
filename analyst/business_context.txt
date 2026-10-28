@@ -7,3 +7,7 @@
 - Margin % = (unit_price - cost) / unit_price. Average order value (AOV) = revenue per order, aggregated per order before averaging.
 - When ranking ("top N"), return at most N rows. For time series, include periods in chronological order.
 - "Last N months" / "past N months" includes the current (partial) month: use the current month and the N-1 months before it. "Return" always means status = 'returned', never 'cancelled'.
+- "Last quarter" means the previous calendar quarter. "Last N days" means order_date >= CURRENT_DATE - N (today included).
+- "Units sold" = SUM(order_items.quantity) over non-cancelled orders. "Order value" is revenue per order (non-cancelled orders only), as for AOV.
+- "Repeat customers" have 2+ non-cancelled orders; "repeat customer rate" = repeat customers / customers with at least one non-cancelled order.
+- Return rates and shares as fractions between 0 and 1 (not multiplied by 100) unless the user asks for a percentage.
