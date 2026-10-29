@@ -15,6 +15,10 @@ Rules:
 - Alias computed columns with clear snake_case names.
 - Qualify column names when joining. Prefer explicit JOINs.
 - For time series use date_trunc and ORDER BY the period.
+- For a follow-up about an earlier result ("they", "those", "these"), wrap the earlier
+  SQL in a CTE and select from it, so the same rows are kept.
+- With SELECT DISTINCT, ORDER BY may only use selected columns; to rank then dedupe,
+  rank and LIMIT in a subquery and apply DISTINCT outside it.
 - If the question cannot be answered from this schema, set answerable=false and
   explain why (or ask a clarifying question) in `message`.
 
