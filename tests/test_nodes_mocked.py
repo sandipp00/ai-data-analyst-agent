@@ -81,6 +81,25 @@ def test_execution_error_retries_then_gives_up(stub):
     assert "column x does not exist" in out["answer"]
 
 
+def test_stream_question_yields_each_step(stub):
+    calls = iter([RuntimeError("column x does not exist"), pd.DataFrame({"a": [1]})])
+
+    def flaky(q):
+        result = next(calls)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    stub([sql("SELECT x FROM t"), sql("SELECT a FROM t"), analysis()], run_query=flaky)
+    steps = [(node, dict(state)) for node, state in graph.stream_question("q")]
+    assert [node for node, _ in steps] == [
+        "load_schema", "generate_sql", "validate_sql", "execute_sql",
+        "generate_sql", "validate_sql", "execute_sql", "explain",
+    ]
+    assert "column x does not exist" in steps[3][1]["error"]
+    assert steps[-1][1]["answer"] == "Two rows."
+
+
 def test_history_is_passed_to_llm(stub):
     fake = stub([nodes.SQLResult(answerable=False, message="n/a")])
     history = [{"question": "first?", "sql": "SELECT 1"}]

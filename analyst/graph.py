@@ -1,5 +1,6 @@
 import logging
 import time
+from collections.abc import Iterator
 from functools import lru_cache
 
 from langgraph.graph import END, START, StateGraph
@@ -46,10 +47,17 @@ def get_graph():
     return build_graph()
 
 
-def run_question(question: str, history: list[dict] | None = None) -> AnalystState:
-    """Run the agent. `history` is a list of prior {"question", "sql"} turns for follow-ups."""
+def stream_question(
+    question: str, history: list[dict] | None = None
+) -> Iterator[tuple[str, AnalystState]]:
+    """Run the agent step by step, yielding (node name, state so far) after each node.
+    `history` is a list of prior {"question", "sql"} turns for follow-ups."""
     start = time.perf_counter()
-    out = get_graph().invoke({"question": question, "history": history or []})
+    out: AnalystState = {"question": question, "history": history or []}
+    for update in get_graph().stream(dict(out), stream_mode="updates"):
+        for node, changes in update.items():
+            out.update(changes or {})
+            yield node, out
     df = out.get("df")
     log.info(
         "question=%r answerable=%s rows=%s retries=%s seconds=%.1f sql=%r",
@@ -60,4 +68,11 @@ def run_question(question: str, history: list[dict] | None = None) -> AnalystSta
         time.perf_counter() - start,
         " ".join((out.get("sql") or "").split()),
     )
+
+
+def run_question(question: str, history: list[dict] | None = None) -> AnalystState:
+    """Run the agent to completion and return the final state."""
+    out: AnalystState = {}
+    for _, out in stream_question(question, history):
+        pass
     return out
